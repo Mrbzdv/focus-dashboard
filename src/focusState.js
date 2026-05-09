@@ -34,9 +34,31 @@ function snapshotDay(state) {
   return {
     date: state.date,
     tasks: state.tasks,
+    distractions: state.distractions,
     wins: state.wins,
     notes: state.notes,
   };
+}
+
+function mergeDay(existingDay, nextDay) {
+  if (!existingDay) {
+    return nextDay;
+  }
+
+  return {
+    date: nextDay.date,
+    tasks: [...(nextDay.tasks ?? []), ...(existingDay.tasks ?? [])],
+    distractions: [...(nextDay.distractions ?? []), ...(existingDay.distractions ?? [])],
+    wins: [...(nextDay.wins ?? []), ...(existingDay.wins ?? [])],
+    notes: [nextDay.notes, existingDay.notes].filter(Boolean).join('\n\n'),
+  };
+}
+
+function archiveDay(state, limit = 31) {
+  const snapshot = snapshotDay(state);
+  const matchingDay = state.history.find((day) => day.date === snapshot.date);
+  const rest = state.history.filter((day) => day.date !== snapshot.date);
+  return [mergeDay(matchingDay, snapshot), ...rest].slice(0, limit);
 }
 
 function elapsedSeconds(startedAt, endedAt) {
@@ -327,13 +349,13 @@ export function resetForDate(state, date = dateKeyFromLocalDate()) {
 
   return {
     ...createInitialState(date),
-    history: [snapshotDay(state), ...state.history].slice(0, 14),
+    history: archiveDay(state),
   };
 }
 
 export function startFreshDay(state) {
   return {
     ...createInitialState(state.date),
-    history: [snapshotDay(state), ...state.history].slice(0, 14),
+    history: archiveDay(state),
   };
 }
