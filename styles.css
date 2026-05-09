@@ -27,6 +27,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -63,9 +64,18 @@ textarea:disabled {
   color: #f8faf8;
 }
 
-.topbar .ghost-button {
+.topbar-actions {
   position: absolute;
   right: 0;
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.export-control {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  gap: 8px;
 }
 
 h1,
@@ -334,6 +344,7 @@ h3 {
 }
 
 input,
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
@@ -344,12 +355,25 @@ textarea {
   padding: 12px;
 }
 
+select {
+  min-height: 44px;
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--ink) 50%) calc(100% - 18px) 19px / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--ink) 50%, transparent 50%) calc(100% - 12px) 19px / 6px 6px no-repeat,
+    rgba(255, 255, 255, 0.92);
+  color: var(--ink);
+  font-weight: 800;
+  padding-right: 34px;
+}
+
 textarea {
   min-height: 180px;
   resize: vertical;
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: var(--mint-strong);
   box-shadow: 0 0 0 3px rgba(46, 125, 90, 0.15);
@@ -453,7 +477,6 @@ textarea:focus {
 
 .history-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
   margin-top: 14px;
 }
@@ -579,12 +602,17 @@ textarea:focus {
     flex-direction: column;
   }
 
-  .topbar .ghost-button {
+  .topbar-actions {
     position: static;
+    justify-items: stretch;
   }
 
   .ghost-button {
     width: 100%;
+  }
+
+  .export-control {
+    grid-template-columns: 1fr;
   }
 
   .focus-panel,

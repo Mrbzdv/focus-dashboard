@@ -13,7 +13,20 @@
           <p class="eyebrow" id="todayLabel">Today</p>
           <h1>Focus Dashboard</h1>
         </div>
-        <button class="ghost-button" id="newDayButton" type="button">Fresh day</button>
+        <div class="topbar-actions">
+          <div class="export-control">
+            <label class="sr-only" for="exportSelect">Choose export</label>
+            <select id="exportSelect" aria-label="Choose export">
+              <option value="all">All data</option>
+              <option value="todo">Open tasks</option>
+              <option value="parking">Parking lot</option>
+              <option value="wins">Tiny wins</option>
+              <option value="history">History</option>
+            </select>
+            <button class="ghost-button" id="exportButton" type="button">Export</button>
+          </div>
+          <button class="ghost-button" id="newDayButton" type="button">Fresh day</button>
+        </div>
       </header>
 
       <section class="dashboard-grid" aria-label="Focus dashboard">
