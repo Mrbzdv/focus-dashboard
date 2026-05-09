@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Focus Dashboard</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="todayLabel">Today</p>
+          <h1>Focus Dashboard</h1>
+        </div>
+        <button class="ghost-button" id="newDayButton" type="button">Fresh day</button>
+      </header>
+
+      <section class="dashboard-grid" aria-label="Focus dashboard">
+        <aside class="panel stack drop-zone" id="todoZone" data-drop-status="todo">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Open</p>
+              <h2>To Do</h2>
+            </div>
+            <span class="count-pill" id="todoCount">0</span>
+          </div>
+          <form class="inline-form" id="todoForm">
+            <label class="sr-only" for="todoInput">Add a to do</label>
+            <input id="todoInput" type="text" maxlength="100" placeholder="Add a task">
+            <button type="submit" aria-label="Add to do">+</button>
+          </form>
+          <ul class="item-list task-list" id="todoList"></ul>
+        </aside>
+
+        <section class="focus-column">
+          <div class="focus-panel drop-zone" id="timerZone" data-drop-status="active">
+            <div>
+              <p class="eyebrow">Active task</p>
+              <h2 id="activeTaskTitle">Drag a task onto the clock</h2>
+            </div>
+
+            <div class="timer-stack" aria-live="polite">
+              <div class="target-clock">
+                <span class="timer-label">Target</span>
+                <label class="sr-only" for="targetMinutesInput">Target minutes</label>
+                <input id="targetMinutesInput" class="target-minutes-input" type="text" inputmode="numeric" pattern="[0-9]*" value="25">
+                <strong id="targetDisplay" hidden>25:00</strong>
+              </div>
+              <div class="elapsed-clock">
+                <span class="timer-label">Elapsed</span>
+                <strong id="elapsedDisplay">00:00</strong>
+              </div>
+            </div>
+
+            <div class="timer-controls">
+              <button id="timerMinus" type="button" aria-label="Reduce target time">-</button>
+              <button class="primary-button" id="timerToggle" type="button">Start</button>
+              <button id="timerPlus" type="button" aria-label="Increase target time">+</button>
+              <button class="warning-button" id="timerStop" type="button">Stop</button>
+            </div>
+
+            <div class="session-result" id="sessionResult" hidden>
+              <p>Session ended. How did it go?</p>
+              <div class="result-actions">
+                <button class="primary-button" id="finishedButton" type="button">Finished</button>
+                <button class="warning-button" id="notFinishedButton" type="button">Not finished</button>
+              </div>
+            </div>
+          </div>
+
+          <section class="notes-panel">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Task notes</p>
+                <h2 id="notesTitle">Attach notes to the active task</h2>
+              </div>
+              <span class="saved-indicator" id="savedIndicator">Saved</span>
+            </div>
+            <label class="sr-only" for="notesInput">Task notes</label>
+            <textarea id="notesInput" rows="8" placeholder="Drop a task onto the clock, then capture notes for it."></textarea>
+          </section>
+        </section>
+
+        <aside class="panel stack">
+          <section class="stack drop-zone" id="parkingZone" data-drop-status="parked">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Later</p>
+                <h2>Parking Lot</h2>
+              </div>
+            </div>
+            <form class="inline-form" id="parkingForm">
+              <label class="sr-only" for="parkingInput">Park a task</label>
+              <input id="parkingInput" type="text" maxlength="100" placeholder="Park a thought">
+              <button type="submit" aria-label="Park task">+</button>
+            </form>
+            <ul class="item-list" id="parkingList"></ul>
+          </section>
+
+          <section class="stack drop-zone" id="winsZone" data-drop-status="finished">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Momentum</p>
+                <h2>Tiny Wins</h2>
+              </div>
+            </div>
+            <form class="inline-form" id="winForm">
+              <label class="sr-only" for="winInput">Log a win</label>
+              <input id="winInput" type="text" maxlength="90" placeholder="Name a win">
+              <button type="submit" aria-label="Add win">+</button>
+            </form>
+            <ul class="item-list" id="winList"></ul>
+          </section>
+        </aside>
+      </section>
+
+      <section class="history-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Archive</p>
+            <h2>History</h2>
+          </div>
+        </div>
+        <div class="history-list" id="historyList"></div>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="confetti-layer" id="confettiLayer" aria-hidden="true"></div>
+    <div class="video-celebration" id="videoCelebration" aria-hidden="true">
+      <video id="finishVideo" src="./assets/finish-celebration.mp4" preload="auto" playsinline></video>
+    </div>
+    <audio id="timerDing" src="./assets/timer-ding.mp3" preload="auto"></audio>
+    <audio id="sadTrombone" src="./assets/sad-trombone.mp3" preload="auto"></audio>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
