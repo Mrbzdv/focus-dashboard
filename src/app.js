@@ -48,6 +48,8 @@ const elements = {
   finishedButton: document.querySelector('#finishedButton'),
   notFinishedButton: document.querySelector('#notFinishedButton'),
   newDayButton: document.querySelector('#newDayButton'),
+  exportSelect: document.querySelector('#exportSelect'),
+  exportButton: document.querySelector('#exportButton'),
   historyList: document.querySelector('#historyList'),
   toast: document.querySelector('#toast'),
   confettiLayer: document.querySelector('#confettiLayer'),
@@ -112,6 +114,10 @@ function formatDuration(seconds) {
   const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, '0');
   const remainder = String(safeSeconds % 60).padStart(2, '0');
   return `${minutes}:${remainder}`;
+}
+
+function formatExportDateTime(value) {
+  return value ? new Date(value).toLocaleString() : 'n/a';
 }
 
 function activeTask() {
@@ -212,16 +218,11 @@ function renderWins() {
 
 function renderHistory() {
   elements.historyList.replaceChildren();
-  const finishedTasks = state.tasks.filter((task) => task.status === 'finished');
-  const activeTasks = state.tasks.filter((task) => task.status !== 'finished' && task.focusSessions.length);
-  const currentCard = makeHistoryCard({ date: state.date, tasks: [...finishedTasks, ...activeTasks], wins: state.wins, notes: state.notes }, 'Today');
+  const days = historyDays();
 
-  if (currentCard) {
-    elements.historyList.append(currentCard);
-  }
-
-  for (const day of state.history) {
-    const card = makeHistoryCard(day, formatDateLabel(day.date));
+  for (const day of days) {
+    const label = day.date === state.date ? 'Today' : formatDateLabel(day.date);
+    const card = makeHistoryCard(day, label);
     if (card) {
       elements.historyList.append(card);
     }
@@ -230,6 +231,20 @@ function renderHistory() {
   if (!elements.historyList.children.length) {
     elements.historyList.append(emptyNode('Complete a task or start a fresh day to build history.'));
   }
+}
+
+function historyDays() {
+  const finishedTasks = state.tasks.filter((task) => task.status === 'finished');
+  const activeTasks = state.tasks.filter((task) => task.status !== 'finished' && task.focusSessions.length);
+  const currentDay = {
+    date: state.date,
+    tasks: [...finishedTasks, ...activeTasks],
+    distractions: state.distractions,
+    wins: state.wins,
+    notes: state.notes,
+  };
+
+  return [currentDay, ...state.history];
 }
 
 function makeHistoryCard(day, label) {
@@ -401,6 +416,163 @@ function showToast(message) {
   setTimeout(() => elements.toast.classList.remove('show'), 1800);
 }
 
+async function exportData() {
+  const exportType = elements.exportSelect.value;
+  const fileDate = new Date().toISOString().slice(0, 10);
+  const exports = {
+    all: {
+      label: 'All data',
+      fileName: `focus-dashboard-all-${fileDate}.txt`,
+      content: buildAllExport(),
+    },
+    todo: {
+      label: 'Open tasks',
+      fileName: `focus-dashboard-open-tasks-${fileDate}.txt`,
+      content: buildTaskExport('Open Tasks', visibleTasks('todo')),
+    },
+    parking: {
+      label: 'Parking lot',
+      fileName: `focus-dashboard-parking-lot-${fileDate}.txt`,
+      content: buildTaskExport('Parking Lot', visibleTasks('parked')),
+    },
+    wins: {
+      label: 'Tiny wins',
+      fileName: `focus-dashboard-tiny-wins-${fileDate}.txt`,
+      content: buildWinsExport(),
+    },
+    history: {
+      label: 'History',
+      fileName: `focus-dashboard-history-${fileDate}.txt`,
+      content: buildHistoryExport(),
+    },
+  };
+  const selected = exports[exportType] ?? exports.all;
+  const saved = await saveTextFile(selected.fileName, selected.content);
+  showToast(saved ? `${selected.label} exported.` : 'Export canceled.');
+}
+
+function buildAllExport() {
+  return [
+    'Focus Dashboard Export',
+    `Exported: ${formatExportDateTime(new Date().toISOString())}`,
+    '',
+    buildTaskExport('Open Tasks', visibleTasks('todo')),
+    '',
+    buildTaskExport('Parking Lot', visibleTasks('parked')),
+    '',
+    buildWinsExport(),
+    '',
+    buildHistoryExport(),
+  ].join('\n');
+}
+
+function buildTaskExport(title, tasks) {
+  const lines = [title, '='.repeat(title.length)];
+  if (!tasks.length) {
+    lines.push('None');
+    return lines.join('\n');
+  }
+
+  for (const task of tasks) {
+    lines.push(`- ${task.text}`);
+    lines.push(`  Added: ${formatExportDateTime(task.createdAt)}`);
+    if (task.notes) {
+      lines.push(`  Notes: ${task.notes}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+function buildWinsExport() {
+  const lines = ['Tiny Wins', '========='];
+  if (!state.wins.length) {
+    lines.push('None');
+    return lines.join('\n');
+  }
+
+  for (const win of state.wins) {
+    lines.push(`- ${win.text}`);
+    lines.push(`  ${win.finishedAt ? 'Finished' : 'Logged'}: ${formatExportDateTime(win.finishedAt ?? win.createdAt)}`);
+  }
+
+  return lines.join('\n');
+}
+
+function buildHistoryExport() {
+  const lines = ['History', '======='];
+  const days = historyDays().filter((day) => (day.tasks ?? []).length || (day.wins ?? []).length || day.notes);
+  if (!days.length) {
+    lines.push('None');
+    return lines.join('\n');
+  }
+
+  for (const day of days) {
+    lines.push('');
+    lines.push(day.date === state.date ? `Today (${day.date})` : day.date);
+    lines.push('-'.repeat(lines.at(-1).length));
+    for (const task of day.tasks ?? []) {
+      lines.push(`Task: ${task.text}`);
+      lines.push(`  Added: ${formatExportDateTime(task.createdAt)}`);
+      if (task.finishedAt) {
+        lines.push(`  Finished: ${formatExportDateTime(task.finishedAt)}`);
+      }
+      for (const session of task.focusSessions ?? []) {
+        lines.push(`  Focus: ${formatExportDateTime(session.startedAt)} | planned ${session.plannedMinutes}m | actual ${formatDuration(session.actualSeconds)} | ${session.result.replace('_', ' ')}`);
+      }
+      if (task.notes) {
+        lines.push(`  Notes: ${task.notes}`);
+      }
+    }
+    for (const win of day.wins ?? []) {
+      lines.push(`Win: ${win.text}`);
+      lines.push(`  Logged: ${formatExportDateTime(win.finishedAt ?? win.createdAt)}`);
+    }
+    if (day.notes) {
+      lines.push(`Day notes: ${day.notes}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+async function saveTextFile(fileName, content) {
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [
+          {
+            description: 'Text file',
+            accept: { 'text/plain': ['.txt'] },
+          },
+        ],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(content);
+      await writable.close();
+      return true;
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        return false;
+      }
+
+      console.error(error);
+    }
+  }
+
+  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+  return true;
+}
+
 function handleTextForm(form, input, action) {
   form.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -478,6 +650,7 @@ elements.timerStop.addEventListener('click', stopAsNotFinished);
 elements.notFinishedButton.addEventListener('click', stopAsNotFinished);
 elements.finishedButton.addEventListener('click', finishActiveTask);
 elements.newDayButton.addEventListener('click', () => updateState(startFreshDay(state)));
+elements.exportButton.addEventListener('click', exportData);
 elements.finishVideo.addEventListener('ended', () => {
   stopFinishVideo();
   elements.videoCelebration.classList.remove('show');
