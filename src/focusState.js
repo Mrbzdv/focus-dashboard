@@ -61,6 +61,53 @@ function archiveDay(state, limit = 31) {
   return [mergeDay(matchingDay, snapshot), ...rest].slice(0, limit);
 }
 
+function taskHasProgress(task) {
+  return task.status === 'finished' || task.finishedAt || task.notes || task.focusSessions?.length;
+}
+
+function carryForwardTask(task) {
+  const status = task.status === 'parked' ? 'parked' : 'todo';
+
+  return {
+    ...task,
+    status,
+    finishedAt: null,
+    events: [...(task.events ?? []), { type: 'carried_forward', at: nowIso(), status }],
+  };
+}
+
+function openTasksFromHistory(history = [], currentDate) {
+  const seen = new Set();
+  const carried = [];
+
+  for (const day of history) {
+    if (day.date === currentDate) {
+      continue;
+    }
+
+    for (const task of day.tasks ?? []) {
+      if (seen.has(task.id) || task.status === 'finished' || task.finishedAt) {
+        continue;
+      }
+
+      seen.add(task.id);
+      carried.push(carryForwardTask(task));
+    }
+  }
+
+  return carried;
+}
+
+function archiveRolloverDay(state, limit = 31) {
+  const snapshot = {
+    ...snapshotDay(state),
+    tasks: state.tasks.filter(taskHasProgress),
+  };
+  const matchingDay = state.history.find((day) => day.date === snapshot.date);
+  const rest = state.history.filter((day) => day.date !== snapshot.date);
+  return [mergeDay(matchingDay, snapshot), ...rest].slice(0, limit);
+}
+
 function elapsedSeconds(startedAt, endedAt) {
   return Math.max(0, Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000));
 }
@@ -344,12 +391,27 @@ export function setTimerStarted(state, startedAt) {
 
 export function resetForDate(state, date = dateKeyFromLocalDate()) {
   if (state.date === date) {
-    return state;
+    if (state.tasks.length || !state.history.length) {
+      return state;
+    }
+
+    const recoveredTasks = openTasksFromHistory(state.history, date);
+    return recoveredTasks.length
+      ? {
+          ...state,
+          tasks: recoveredTasks,
+        }
+      : state;
   }
+
+  const carriedTasks = state.tasks
+    .filter((task) => task.status !== 'finished' && !task.finishedAt)
+    .map(carryForwardTask);
 
   return {
     ...createInitialState(date),
-    history: archiveDay(state),
+    tasks: carriedTasks,
+    history: archiveRolloverDay(state),
   };
 }
 
