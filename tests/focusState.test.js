@@ -111,7 +111,7 @@ test('tracks manual wins and parked thoughts without mutating prior state', () =
   assert.equal(state.wins[0].text, 'Started with a working vertical slice');
 });
 
-test('starts a fresh day while carrying yesterday into history', () => {
+test('starts a new calendar day while carrying unfinished tasks forward', () => {
   let state = createInitialState('2026-05-08');
   state = addTodo(state, 'Close out Friday', '2026-05-08T09:00:00.000Z');
   state = addWin(state, 'Kept the scope small');
@@ -119,10 +119,57 @@ test('starts a fresh day while carrying yesterday into history', () => {
   const next = resetForDate(state, '2026-05-09');
 
   assert.equal(next.date, '2026-05-09');
-  assert.deepEqual(next.tasks, []);
+  assert.equal(next.tasks[0].text, 'Close out Friday');
+  assert.equal(next.tasks[0].status, 'todo');
   assert.deepEqual(next.wins, []);
   assert.equal(next.history[0].date, '2026-05-08');
-  assert.equal(next.history[0].tasks[0].text, 'Close out Friday');
+  assert.deepEqual(next.history[0].tasks, []);
+  assert.equal(next.history[0].wins[0].text, 'Kept the scope small');
+});
+
+test('keeps focused unfinished tasks in history and open tasks on calendar rollover', () => {
+  let state = createInitialState('2026-05-08');
+  state = addTodo(state, 'Continue tomorrow', '2026-05-08T09:00:00.000Z');
+  state = startFocusSession(state, state.tasks[0].id, 25, '2026-05-08T09:05:00.000Z');
+  state = finishFocusSession(state, 'not_finished', '2026-05-08T09:20:00.000Z');
+
+  const next = resetForDate(state, '2026-05-09');
+
+  assert.equal(next.tasks[0].text, 'Continue tomorrow');
+  assert.equal(next.tasks[0].status, 'todo');
+  assert.equal(next.history[0].tasks[0].text, 'Continue tomorrow');
+  assert.equal(next.history[0].tasks[0].focusSessions[0].result, 'not_finished');
+});
+
+test('recovers unfinished tasks from prior history when a previous build cleared the board', () => {
+  const state = {
+    ...createInitialState('2026-05-09'),
+    history: [
+      {
+        date: '2026-05-08',
+        tasks: [
+          {
+            id: 'task-1',
+            text: 'Recovered task',
+            createdAt: '2026-05-08T09:00:00.000Z',
+            status: 'todo',
+            finishedAt: null,
+            notes: '',
+            focusSessions: [],
+            events: [],
+          },
+        ],
+        distractions: [],
+        wins: [],
+        notes: '',
+      },
+    ],
+  };
+
+  const next = resetForDate(state, '2026-05-09');
+
+  assert.equal(next.tasks[0].text, 'Recovered task');
+  assert.equal(next.tasks[0].status, 'todo');
 });
 
 test('can intentionally clear the current day and preserve it in history', () => {
@@ -137,4 +184,42 @@ test('can intentionally clear the current day and preserve it in history', () =>
   assert.deepEqual(next.distractions, []);
   assert.equal(next.history[0].date, '2026-05-08');
   assert.equal(next.history[0].tasks[0].text, 'Reset the board');
+});
+
+test('fresh day merges with an existing same-day history entry', () => {
+  let state = createInitialState('2026-05-08');
+  state = addTodo(state, 'Morning task', '2026-05-08T09:00:00.000Z');
+  state = startFreshDay(state);
+  state = addTodo(state, 'Afternoon task', '2026-05-08T14:00:00.000Z');
+
+  const next = startFreshDay(state);
+
+  assert.equal(next.history.length, 1);
+  assert.equal(next.history[0].date, '2026-05-08');
+  assert.deepEqual(
+    next.history[0].tasks.map((task) => task.text),
+    ['Afternoon task', 'Morning task'],
+  );
+});
+
+test('history keeps up to 31 archived days', () => {
+  let state = createInitialState('2026-05-01');
+
+  for (let day = 1; day <= 33; day += 1) {
+    const date = `2026-05-${String(day).padStart(2, '0')}`;
+    state = {
+      ...state,
+      date,
+      tasks: [],
+      wins: [],
+      distractions: [],
+      notes: '',
+    };
+    state = addTodo(state, `Task ${day}`, `${date}T09:00:00.000Z`);
+    state = resetForDate(state, `2026-06-${String(day).padStart(2, '0')}`);
+  }
+
+  assert.equal(state.history.length, 31);
+  assert.equal(state.history[0].date, '2026-05-33');
+  assert.equal(state.history.at(-1).date, '2026-05-03');
 });
