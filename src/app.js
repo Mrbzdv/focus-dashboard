@@ -15,7 +15,7 @@ import {
   setTimerStarted,
   startFocusSession,
   startFreshDay,
-} from './focusState.js';
+} from './focusState.js?v=20260514-carry-forward';
 
 const STORAGE_KEY = 'focus-dashboard-state-v2';
 const LEGACY_STORAGE_KEY = 'focus-dashboard-state-v1';
