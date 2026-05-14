@@ -363,6 +363,26 @@ export function removeWin(state, id) {
   };
 }
 
+export function deleteItem(state, id) {
+  const task = state.tasks.find((item) => item.id === id);
+  const matchesWin = (win) => win.id === id || win.taskId === id;
+  const matchesTask = (item) => item.id === id;
+
+  return {
+    ...state,
+    activeTaskId: state.activeTaskId === id ? null : state.activeTaskId,
+    timer: state.activeTaskId === id ? { ...state.timer, startedAt: null } : state.timer,
+    tasks: state.tasks.filter((item) => !matchesTask(item)),
+    wins: state.wins.filter((win) => !matchesWin(win)),
+    history: state.history.map((day) => ({
+      ...day,
+      tasks: (day.tasks ?? []).filter((item) => !matchesTask(item)),
+      wins: (day.wins ?? []).filter((win) => !matchesWin(win)),
+    })),
+    notes: task && state.activeTaskId === id ? state.notes : state.notes,
+  };
+}
+
 export function setTimerMinutes(state, minutes) {
   const numericMinutes = Number(minutes);
   const safeMinutes = Number.isFinite(numericMinutes)
