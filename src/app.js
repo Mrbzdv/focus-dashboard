@@ -50,6 +50,8 @@ const elements = {
   newDayButton: document.querySelector('#newDayButton'),
   exportSelect: document.querySelector('#exportSelect'),
   exportButton: document.querySelector('#exportButton'),
+  restoreButton: document.querySelector('#restoreButton'),
+  restoreInput: document.querySelector('#restoreInput'),
   historyList: document.querySelector('#historyList'),
   toast: document.querySelector('#toast'),
   confettiLayer: document.querySelector('#confettiLayer'),
@@ -445,9 +447,21 @@ async function exportData() {
       fileName: `focus-dashboard-history-${fileDate}.txt`,
       content: buildHistoryExport(),
     },
+    backup: {
+      label: 'Restorable backup',
+      fileName: `focus-dashboard-backup-${fileDate}.json`,
+      content: buildBackupExport(),
+      mimeType: 'application/json',
+      extension: '.json',
+      description: 'JSON backup',
+    },
   };
   const selected = exports[exportType] ?? exports.all;
-  const saved = await saveTextFile(selected.fileName, selected.content);
+  const saved = await saveTextFile(selected.fileName, selected.content, {
+    mimeType: selected.mimeType,
+    extension: selected.extension,
+    description: selected.description,
+  });
   showToast(saved ? `${selected.label} exported.` : 'Export canceled.');
 }
 
@@ -536,15 +550,32 @@ function buildHistoryExport() {
   return lines.join('\n');
 }
 
-async function saveTextFile(fileName, content) {
+function buildBackupExport() {
+  return JSON.stringify(
+    {
+      app: 'focus-dashboard',
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      state,
+    },
+    null,
+    2,
+  );
+}
+
+async function saveTextFile(fileName, content, options = {}) {
+  const mimeType = options.mimeType ?? 'text/plain';
+  const extension = options.extension ?? '.txt';
+  const description = options.description ?? 'Text file';
+
   if ('showSaveFilePicker' in window) {
     try {
       const handle = await window.showSaveFilePicker({
         suggestedName: fileName,
         types: [
           {
-            description: 'Text file',
-            accept: { 'text/plain': ['.txt'] },
+            description,
+            accept: { [mimeType]: [extension] },
           },
         ],
       });
@@ -561,7 +592,7 @@ async function saveTextFile(fileName, content) {
     }
   }
 
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
@@ -571,6 +602,35 @@ async function saveTextFile(fileName, content) {
   anchor.remove();
   URL.revokeObjectURL(url);
   return true;
+}
+
+function promptForRestore() {
+  elements.restoreInput.value = '';
+  elements.restoreInput.click();
+}
+
+async function restoreFromBackup(event) {
+  const file = event.target.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const content = await file.text();
+    const parsed = JSON.parse(content);
+    const importedState = parsed?.state ?? parsed;
+
+    if (!importedState?.date) {
+      throw new Error('Backup does not contain Focus Dashboard state.');
+    }
+
+    pendingSession = false;
+    updateState(resetForDate(migrateState(importedState, today()), today()));
+    showToast('Backup restored.');
+  } catch (error) {
+    console.error(error);
+    showToast('Could not restore that backup.');
+  }
 }
 
 function handleTextForm(form, input, action) {
@@ -651,6 +711,8 @@ elements.notFinishedButton.addEventListener('click', stopAsNotFinished);
 elements.finishedButton.addEventListener('click', finishActiveTask);
 elements.newDayButton.addEventListener('click', () => updateState(startFreshDay(state)));
 elements.exportButton.addEventListener('click', exportData);
+elements.restoreButton.addEventListener('click', promptForRestore);
+elements.restoreInput.addEventListener('change', restoreFromBackup);
 elements.finishVideo.addEventListener('ended', () => {
   stopFinishVideo();
   elements.videoCelebration.classList.remove('show');
