@@ -55,23 +55,21 @@ textarea:disabled {
 
 .topbar {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
   margin-bottom: 22px;
-  position: relative;
-  text-align: center;
+  text-align: left;
   color: #f8faf8;
 }
 
 .topbar-actions {
-  position: absolute;
-  right: 0;
   display: grid;
-  grid-template-columns: minmax(150px, 190px) repeat(3, 96px);
+  grid-template-columns: minmax(104px, 128px) repeat(3, 66px);
   align-items: start;
-  gap: 6px;
-  width: min(540px, 46vw);
+  flex: 0 0 min(340px, 48vw);
+  gap: 4px;
+  width: min(340px, 100%);
 }
 
 .data-control {
@@ -92,7 +90,7 @@ h1 {
   font-size: clamp(2rem, 4vw, 4.25rem);
   line-height: 0.95;
   letter-spacing: 0;
-  text-align: center;
+  text-align: left;
 }
 
 h2 {
@@ -310,7 +308,8 @@ h3 {
   border: 1px solid rgba(255, 255, 255, 0.26);
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  padding: 0 10px;
+  font-size: 0.72rem;
+  padding: 0 7px;
   text-align: center;
   white-space: nowrap;
 }
@@ -322,8 +321,8 @@ h3 {
 
 .topbar-actions select,
 .topbar-actions .ghost-button {
-  height: 44px;
-  min-height: 44px;
+  height: 30px;
+  min-height: 30px;
 }
 
 .persistence-note {
@@ -334,11 +333,11 @@ h3 {
 }
 
 .note-trigger {
-  min-height: 20px;
+  min-height: 16px;
   border: 0;
   background: transparent;
   color: rgba(248, 250, 248, 0.82);
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 800;
   line-height: 1;
   padding: 2px 1px;
@@ -432,12 +431,13 @@ select {
   min-height: 44px;
   appearance: none;
   background:
-    linear-gradient(45deg, transparent 50%, var(--ink) 50%) calc(100% - 18px) 19px / 6px 6px no-repeat,
-    linear-gradient(135deg, var(--ink) 50%, transparent 50%) calc(100% - 12px) 19px / 6px 6px no-repeat,
+    linear-gradient(45deg, transparent 50%, var(--ink) 50%) calc(100% - 15px) 13px / 5px 5px no-repeat,
+    linear-gradient(135deg, var(--ink) 50%, transparent 50%) calc(100% - 10px) 13px / 5px 5px no-repeat,
     rgba(255, 255, 255, 0.92);
   color: var(--ink);
+  font-size: 0.72rem;
   font-weight: 800;
-  padding-right: 34px;
+  padding: 6px 24px 6px 8px;
 }
 
 textarea {
@@ -671,12 +671,13 @@ textarea:focus {
   }
 
   .topbar {
-    align-items: stretch;
+    align-items: flex-start;
     flex-direction: column;
+    gap: 12px;
   }
 
   .topbar-actions {
-    position: static;
+    flex: none;
     grid-template-columns: 1fr;
     width: 100%;
     justify-items: stretch;
