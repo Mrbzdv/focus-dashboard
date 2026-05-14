@@ -6,6 +6,7 @@ import {
   completeTask,
   createInitialState,
   dateKeyFromLocalDate,
+  deleteItem,
   finishFocusSession,
   migrateState,
   moveTask,
@@ -15,7 +16,7 @@ import {
   setTimerStarted,
   startFocusSession,
   startFreshDay,
-} from './focusState.js?v=20260514-carry-forward';
+} from './focusState.js?v=20260514-shredder';
 
 const STORAGE_KEY = 'focus-dashboard-state-v2';
 const LEGACY_STORAGE_KEY = 'focus-dashboard-state-v1';
@@ -33,6 +34,7 @@ const elements = {
   winForm: document.querySelector('#winForm'),
   winInput: document.querySelector('#winInput'),
   winList: document.querySelector('#winList'),
+  shredderZone: document.querySelector('#shredderZone'),
   activeTaskTitle: document.querySelector('#activeTaskTitle'),
   notesTitle: document.querySelector('#notesTitle'),
   notesInput: document.querySelector('#notesInput'),
@@ -193,6 +195,7 @@ function renderTaskList(node, tasks, emptyText) {
     li.append(text, meta, actions);
     li.addEventListener('dragstart', (event) => {
       event.dataTransfer.setData('text/plain', task.id);
+      event.dataTransfer.setData('application/x-focus-item', 'task');
       event.dataTransfer.effectAllowed = 'move';
     });
     node.append(li);
@@ -209,11 +212,18 @@ function renderWins() {
   for (const win of state.wins) {
     const li = document.createElement('li');
     li.className = 'win-card';
+    li.draggable = true;
+    li.dataset.itemId = win.id;
     const text = document.createElement('span');
     text.textContent = win.text;
     const meta = document.createElement('small');
     meta.textContent = win.finishedAt ? `Finished ${formatDateTime(win.finishedAt)}` : `Logged ${formatDateTime(win.createdAt)}`;
     li.append(text, meta);
+    li.addEventListener('dragstart', (event) => {
+      event.dataTransfer.setData('text/plain', win.taskId ?? win.id);
+      event.dataTransfer.setData('application/x-focus-item', win.taskId ? 'task' : 'win');
+      event.dataTransfer.effectAllowed = 'move';
+    });
     elements.winList.append(li);
   }
 }
@@ -370,6 +380,12 @@ function finishActiveTask() {
 function finishTask(taskId) {
   updateState(completeTask(state, taskId, new Date().toISOString()));
   celebrate();
+}
+
+function shredItem(itemId) {
+  pendingSession = false;
+  updateState(deleteItem(state, itemId));
+  showToast('Deleted.');
 }
 
 function celebrate() {
@@ -662,6 +678,8 @@ function wireDropZones() {
         activateTask(taskId);
       } else if (status === 'finished') {
         finishTask(taskId);
+      } else if (status === 'delete') {
+        shredItem(taskId);
       } else {
         updateState(moveTask(state, taskId, status));
       }
